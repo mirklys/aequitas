@@ -7,7 +7,7 @@ class Home:
     def run(self):
         st.write("Welcome to the Home page")
         # upload csv file
-        uploaded_file = st.file_uploader("Update spendings", type="csv")
+        uploaded_file = st.file_uploader("Update spendings", type="xls")
         if uploaded_file is not None:
             st.write("File uploaded")
             # update the table
