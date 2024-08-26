@@ -12,5 +12,6 @@ class Home:
             st.write("File uploaded")
             # update the table
             self.aequitas.update_table(uploaded_file)
-            st.write("Table updated")
+            st.write(f"Table {self.aequitas.table.table_name} updated")
+            st.write(self.aequitas.get_data().head(5))
         

@@ -28,8 +28,12 @@ class Aequitas:
 
         return pages
 
-    def update_table(self, csv_file):
-        self.table.update_table_from_csv(csv_file)
+    def update_table(self, xsl_file):
+        old_size = self.table.size
+        self.table.update_table_from_xsl(xsl_file)
+        self.table = self.db.get_table("transactions")
+        new_size = self.table.size
+        st.write(f"Table {self.table.table_name} updated from {old_size} to {new_size} rows")
 
     def get_data(self):
         return self.table.get_data_from_table()
