@@ -1,5 +1,6 @@
 import sqlite3
 import pandas as pd
+import re
 
 class Database:
     def __init__(self, db_name):
@@ -43,11 +44,91 @@ class Table:
 
         if not self.check_table_exists(self.table_name):
             self.create_table()
+        
+        self.size = self.get_table_size()
+        self.columns = self.get_columns()
 
-    def update_table_from_csv(self, csv_file):
-        new_data = pd.read_csv(csv_file)
+    def get_columns(self):
+        query = f'''
+        PRAGMA table_info({self.table_name})
+        '''
+        self.cursor.execute(query)
+        columns = self.cursor.fetchall()
+        return [column[1] for column in columns]
+
+    def update_table_from_xsl(self, xsl_file):
+        new_data = pd.read_excel(xsl_file)
+        parsed_details = new_data["Omschrijving"].apply(self._parse_transaction)
+        parsed_df = pd.DataFrame(parsed_details.tolist())
+        new_data = pd.concat([new_data, parsed_df], axis=1)
+        new_data = new_data.drop(columns=['Omschrijving', "BIC", "EREF", "ORDP"])
+
+        new_data = new_data.fillna('NOTPROVIDED')
+        new_data = new_data.apply(self._update_name, axis=1)
+        print(self.columns)
         new_data.to_sql(self.table_name, self.conn, if_exists='append', index=False)
+        self.remove_duplicates()
 
+    def remove_duplicates(self):
+        query = f'''
+        DELETE FROM {self.table_name}
+        WHERE id NOT IN (
+            SELECT MIN(id)
+            FROM {self.table_name}
+            GROUP BY Rekeningnummer, Muntsoort, Transactiedatum, Rentedatum, Beginsaldo, Eindsaldo, Transactiebedrag, TRTP, IBAN, NAME, REMI, location);
+            VACUUM;
+        '''
+
+    def _update_name(self, row):
+        # Check if 'tikkie' is in the NAME column (case insensitive)
+        if 'tikkie' in row['NAME'].lower():
+            if 'via' in row['NAME'].lower():
+                # Remove 'via Tikkie' (case insensitive)
+                row['NAME'] = re.sub(r'via\s+tikkie', '', row['NAME'], flags=re.IGNORECASE).strip()
+
+                remi_row = row['REMI']
+                
+                pattern = r'\b\d+\b\s+\b\d+\b\s+(.*?)\s+([A-Z]{2}[A-Z0-9]+)'
+                match = re.search(pattern, remi_row)
+                if match:
+                    # The substring is captured in the first group
+                    substring = match.group(1)
+                    remi_row = substring.strip()
+                else:
+                    remi_row = None
+
+                row['REMI'] = remi_row
+            else:
+                # Split the REMI column by comma and take the second to last element
+                remi_parts = [part.strip() for part in row['REMI'].split(',')]
+                if len(remi_parts) > 1:
+                    row['NAME'] = remi_parts[-2]
+                    row['REMI'] = remi_parts[1]
+        return row
+    
+    def _clean_list(self, lst):
+        """Remove empty strings and strings with only spaces."""
+        return [item for item in lst if item.strip()]
+    
+    def _parse_transaction(self, details):
+        if details.startswith('/'):
+            # Handle structured data
+            parts = details.split('/')
+            cleaned_parts = self._clean_list(parts)
+            return dict(zip(cleaned_parts[::2], cleaned_parts[1::2]))
+        else:
+            # Handle unstructured data
+            parts = details.split('  ')
+            cleaned_parts = self._clean_list(parts)
+            if cleaned_parts[0].startswith('BEA'):
+                return {
+                    'TRTP': cleaned_parts[0],
+                    'NAME': cleaned_parts[1].split(',')[0].strip(),
+                    'IBAN': cleaned_parts[1].split(',')[1].strip(),
+                    'location': cleaned_parts[-1]
+                }
+        return {}
+    
     def get_data_from_table(self):
         query = f'''
         SELECT * FROM {self.table_name}
@@ -66,12 +147,26 @@ class Table:
         query = f'''
         CREATE TABLE {self.table_name} (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            date TEXT NOT NULL,
-            category TEXT NOT NULL,
-            amount REAL NOT NULL,
-            description TEXT,
-            incoming BOOLEAN NOT NULL
+            Rekeningnummer BIGINT NOT NULL,
+            Muntsoort TEXT,
+            Transactiedatum BIGINT NOT NULL,
+            Rentedatum BIGINT NOT NULL,
+            Beginsaldo REAL,
+            Eindsaldo REAL,
+            Transactiebedrag REAL,
+            TRTP TEXT,
+            IBAN TEXT,
+            NAME TEXT,
+            REMI TEXT,
+            location TEXT
         )
         '''
         self.cursor.execute(query)
         self.conn.commit()
+
+    def get_table_size(self):
+        query = f'''
+        SELECT COUNT(*) FROM {self.table_name}
+        '''
+        self.cursor.execute(query)
+        return self.cursor.fetchone()[0]
