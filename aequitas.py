@@ -6,6 +6,7 @@ from scripts.database import Database
 # Title of the dashboard
 st.title("AEQUITAS")
 
+
 class Aequitas:
     def __init__(self, db_name):
         self.db = Database(db_name)
@@ -14,7 +15,7 @@ class Aequitas:
 
     def retrieve_pages(self):
         folder = "pages"
-        
+
         # retrieve all the pages in the folder and their classes, one main class per page
         pages = {}
         for filename in os.listdir(folder):
@@ -33,7 +34,9 @@ class Aequitas:
         self.table.update_table_from_xsl(xsl_file)
         self.table = self.db.get_table("transactions")
         new_size = self.table.size
-        st.write(f"Table {self.table.table_name} updated from {old_size} to {new_size} rows")
+        st.write(
+            f"Table {self.table.table_name} updated from {old_size} to {new_size} rows"
+        )
 
     def get_data(self):
         return self.table.get_data_from_table()
