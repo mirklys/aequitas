@@ -78,6 +78,8 @@ class Table:
             GROUP BY Rekeningnummer, Muntsoort, Transactiedatum, Rentedatum, Beginsaldo, Eindsaldo, Transactiebedrag, TRTP, IBAN, NAME, REMI, location);
             VACUUM;
         '''
+        self.cursor.executescript(query)
+        self.conn.commit()
 
     def _update_name(self, row):
         # Check if 'tikkie' is in the NAME column (case insensitive)
