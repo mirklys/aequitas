@@ -24,4 +24,30 @@ class Home:
         st.write(f"Total outgoing: {outgoing['amount'].sum().round(2)} EUR")
         st.write(f"Total balance: {(incoming['amount'].sum() - outgoing['amount'].sum()).round(2)} EUR")
 
+        # amount between dates
+        st.write("Select a date range")
+        start_date = st.date_input("Start date")
+        end_date = st.date_input("End date")
+
+        if start_date is None:
+            start_date = self.aequitas.get_data()["date"].min()
+        if end_date is None:
+            end_date = self.aequitas.get_data()["date"].max()
+
+        start_date = start_date.strftime("%Y-%m-%d")
+        end_date = end_date.strftime("%Y-%m-%d")
+        if start_date > end_date:
+            st.warning("Start date should be before end date")
+            
+
+        incoming = incoming.loc[(incoming["date"] >= start_date) & (incoming["date"] <= end_date)]
+        outgoing = outgoing.loc[(outgoing["date"] >= start_date) & (outgoing["date"] <= end_date)]
+
+        st.write(f"Total incoming between {start_date} and {end_date}: {incoming['amount'].sum().round(2)} EUR")
+        st.write(f"Total outgoing between {start_date} and {end_date}: {outgoing['amount'].sum().round(2)} EUR")
+        st.write(f"Total balance between {start_date} and {end_date}: {(incoming['amount'].sum() - outgoing['amount'].sum()).round(2)} EUR")
+
+
+
+
         
