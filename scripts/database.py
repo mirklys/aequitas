@@ -61,11 +61,14 @@ class Table:
         parsed_details = new_data["Omschrijving"].apply(self._parse_transaction)
         parsed_df = pd.DataFrame(parsed_details.tolist())
         new_data = pd.concat([new_data, parsed_df], axis=1)
-        new_data = new_data.drop(columns=['Omschrijving', "BIC", "EREF", "ORDP"])
-
+        new_data = new_data.drop(columns=['Omschrijving', "BIC", "EREF", "ORDP", "Rekeningnummer", "Muntsoort", "Rentedatum", "IBAN", "TRTP"])
         new_data = new_data.fillna('NOTPROVIDED')
+        new_data['Transactiedatum'] = new_data['Transactiedatum'].astype(str).apply(lambda x: x[:4]+"-"+x[4:6]+"-"+x[6:])
         new_data = new_data.apply(self._update_name, axis=1)
-        print(self.columns)
+        new_data = new_data.rename(columns={'Transactiedatum': 'date', 'Transactiebedrag': 'amount', 'NAME': 'name', 'REMI': 'description', 'location': 'location',
+                                            'Beginsaldo': 'start_balance', 'Eindsaldo': 'end_balance'})
+        new_data['incoming'] = new_data['amount'] > 0
+        new_data['amount'] = new_data['amount'].abs()
         new_data.to_sql(self.table_name, self.conn, if_exists='append', index=False)
         self.remove_duplicates()
 
@@ -75,7 +78,7 @@ class Table:
         WHERE id NOT IN (
             SELECT MIN(id)
             FROM {self.table_name}
-            GROUP BY Rekeningnummer, Muntsoort, Transactiedatum, Rentedatum, Beginsaldo, Eindsaldo, Transactiebedrag, TRTP, IBAN, NAME, REMI, location);
+            GROUP BY date, start_balance, end_balance, amount, name, description, location);
             VACUUM;
         '''
         self.cursor.executescript(query)
@@ -149,18 +152,14 @@ class Table:
         query = f'''
         CREATE TABLE {self.table_name} (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            Rekeningnummer BIGINT NOT NULL,
-            Muntsoort TEXT,
-            Transactiedatum BIGINT NOT NULL,
-            Rentedatum BIGINT NOT NULL,
-            Beginsaldo REAL,
-            Eindsaldo REAL,
-            Transactiebedrag REAL,
-            TRTP TEXT,
-            IBAN TEXT,
-            NAME TEXT,
-            REMI TEXT,
-            location TEXT
+            date TEXT NOT NULL,
+            start_balance REAL,
+            end_balance REAL,
+            amount REAL,
+            name TEXT,
+            description TEXT,
+            location TEXT,
+            incoming BOOLEAN DEFAULT 0
         )
         '''
         self.cursor.execute(query)
