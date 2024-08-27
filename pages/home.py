@@ -1,5 +1,6 @@
 import streamlit as st
 
+
 class Home:
     def __init__(self, aequitas):
         self.aequitas = aequitas
@@ -14,4 +15,3 @@ class Home:
             self.aequitas.update_table(uploaded_file)
             st.write(f"Table {self.aequitas.table.table_name} updated")
             st.write(self.aequitas.get_data().head(5))
-        
