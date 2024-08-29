@@ -1,5 +1,5 @@
 import streamlit as st
-
+import plotly.express as px
 
 class Home:
     def __init__(self, aequitas):
@@ -46,6 +46,25 @@ class Home:
         st.write(f"Total incoming between {start_date} and {end_date}: {incoming['amount'].sum().round(2)} EUR")
         st.write(f"Total outgoing between {start_date} and {end_date}: {outgoing['amount'].sum().round(2)} EUR")
         st.write(f"Total balance between {start_date} and {end_date}: {(incoming['amount'].sum() - outgoing['amount'].sum()).round(2)} EUR")
+
+        # Count the number of transactions per category
+        # Count the number of transactions per category
+
+        category_counts = outgoing['category'].value_counts()
+
+        # Create a pie chart using Plotly
+        fig = px.pie(values=category_counts, names=category_counts.index, title='Spending Categories Pie Chart')
+
+        # Streamlit components
+        st.title('Spending Categories Pie Chart')
+        st.plotly_chart(fig)
+
+        # get the sum of the amount per category
+        category_sum = outgoing.groupby("category")["amount"].sum()
+        fig = px.bar(x=category_sum.index, y=category_sum.values, title="Spending Categories Bar Chart")
+        st.title("Spending Categories Bar Chart")
+        st.plotly_chart(fig)
+        
 
 
 
