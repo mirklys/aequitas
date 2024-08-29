@@ -2,6 +2,8 @@ import sqlite3
 import pandas as pd
 import re
 
+from scripts.payments_classifier import PaymentCategoryRBM
+
 
 class Database:
     def __init__(self, db_name):
@@ -96,8 +98,14 @@ class Table:
         )
         new_data["incoming"] = new_data["amount"] > 0
         new_data["amount"] = new_data["amount"].abs()
+        new_data = self._assign_category(new_data)
         new_data.to_sql(self.table_name, self.conn, if_exists="append", index=False)
         self.remove_duplicates()
+
+    def _assign_category(self, new_data):
+        rbm = PaymentCategoryRBM(new_data)
+        new_data = rbm.categorize()
+        return new_data
 
     def remove_duplicates(self):
         query = f"""
@@ -188,7 +196,8 @@ class Table:
             name TEXT,
             description TEXT,
             location TEXT,
-            incoming BOOLEAN DEFAULT 0
+            incoming BOOLEAN DEFAULT 0,
+            category TEXT DEFAULT 'unknown'
         )
         """
         self.cursor.execute(query)
