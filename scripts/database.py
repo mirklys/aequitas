@@ -62,6 +62,7 @@ class Table:
 
     def update_table_from_xsl(self, xsl_file):
         new_data = pd.read_excel(xsl_file)
+
         parsed_details = new_data["Omschrijving"].apply(self._parse_transaction)
         parsed_df = pd.DataFrame(parsed_details.tolist())
         new_data = pd.concat([new_data, parsed_df], axis=1)
@@ -70,13 +71,18 @@ class Table:
                 "Omschrijving",
                 "BIC",
                 "EREF",
-                "ORDP",
                 "Rekeningnummer",
                 "Muntsoort",
                 "Rentedatum",
                 "IBAN",
                 "TRTP",
-            ]
+                "CSID",
+                "MARF",
+                "2024",
+                "SA",
+                "8245678644000 7020748520633493 9206.31728.vd3.66f939442131c Radboud Universiteit Nijmegen"
+            ],
+            errors='ignore'
         )
         new_data = new_data.fillna("NOTPROVIDED")
         new_data["Transactiedatum"] = (
@@ -160,7 +166,7 @@ class Table:
             return dict(zip(cleaned_parts[::2], cleaned_parts[1::2]))
         else:
             # Handle unstructured data
-            parts = details.split("  ")
+            parts = details.split("   ")
             cleaned_parts = self._clean_list(parts)
             if cleaned_parts[0].startswith("BEA"):
                 return {
